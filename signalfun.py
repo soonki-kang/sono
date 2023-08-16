@@ -10,40 +10,34 @@ class signalFun(QObject):
    
     def check_date(self, tdate):
          # 요일 추출
+         mv.isRUN = False
          tdate = tdate.toPython()
          current_date = datetime.today()
          current_date = current_date.date()
-         mv.REV_WEEK = datetime.isoweekday(tdate)    ##  요일을 1~7로 반환 weekday: 0~6반환
-         if mv.REV_WEEK > 5:
-            mv.AFTER_CNT = 5 + mv.REV_WEEK 
-            cnt_date = tdate + timedelta(days = (-mv.AFTER_CNT))
-            mv.BASE_TIME = time(14,0,0)
-         else:
-            mv.AFTER_CNT = 14
-            cnt_date = tdate + timedelta(days = -mv.AFTER_CNT)
-            mv.BASE_TIME = time(10,0,0)
+         curr_week    = datetime.isoweekday(current_date)
+         curr_time    = datetime.today().time()
+         mv.REV_WEEK = datetime.isoweekday(tdate)    ##  요일을 1~7로 반환: weekday: 0~6반환
+         
+         
+         # 월요일부터 주말까지 월요일에 일괄 예약함.
+         if curr_week != 1 :
+             self.checkDisplay.emit('월요일이 아닙니다.')
+             return
+         
+         if curr_time > mv.BASE_TIME :
+             self.checkDisplay.emit('예약 시간이 지났습니다.')
+             return
+         
+         # 예약 일자가  현재일 부터 4주 후 날자에 해당하는가?
+         # 예약 가능 시작일(avail_fm_date) 및
+         # 예약 가능 종료일(avail_to_date) 계산(4주 후 월요일과 일요일)
+         avail_fm_date = current_date + timedelta( days = 29 - curr_week)
+         avail_to_date = avail_fm_date + timedelta(days =  6)
 
-         # 지정회원 정의(memver = True이면 지정회원)
-         if mv.USER_MEMBER:
-            if mv.REV_WEEK >= 6 :
-               self.checkDisplay.emit("주말 예약은 불가합니다.")
-               return
-            else:
-               mv.AFTER_CNT = 13
-               cnt_date = tdate + timedelta(days = -mv.AFTER_CNT)
+         if avail_fm_date > tdate  or tdate > avail_to_date :
+             self.checkDisplay.emit("4주 후 주간만 예약 가능합니다.")
+             return 
 
-         mv.isRUN = False
-         curr_time  =  datetime.today().time()
-         if current_date > cnt_date:
-            self.checkDisplay.emit("예약 날자가 지났습니다.")
-            return
-         elif current_date != cnt_date :  
-            self.checkDisplay.emit("예약 날자가 아닙니다.")
-            return
-         elif curr_time > mv.BASE_TIME:
-            self.checkDisplay.emit("예약 시간이 지났습니다.")
-            return
-         else:
-            self.checkDisplay.emit(f"{tdate.strftime('%y-%m-%d')} 예약을 시작합니다.")
+         self.checkDisplay.emit(f"{tdate.strftime('%y-%m-%d')}일이 지정되었습니다.")
 
          mv.isRUN = True
